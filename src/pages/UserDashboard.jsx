@@ -3,13 +3,17 @@ import React, { useState, useEffect } from "react";
 import axios from 'axios';
 
 const UserDashboard = () => {
-  const [selectedTab, setSelectedTab] = useState("general"); 
+  const [selectedTab, setSelectedTab] = useState("general");
   const { user } = useSelector((state) => state.Auth);
   const [donations, setDonations] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false); // loading state
-
+  const[adoptions,setAdoptions] = useState([])
+  const[currentPageAdoption,setCurrentPageAdoption] = useState(1);
+  const[totalPagesAdoptions,setTotalPagesAdoptions] = useState(1);
+  const [loadingAdoption, setLoadingAdoption] = useState(false); // loading state
+  console.log(selectedTab)
   const fetchDonations = async (page = 1) => {
     setLoading(true);
     try {
@@ -24,21 +28,55 @@ const UserDashboard = () => {
       setLoading(false); // Set loading to false after fetching data
     }
   };
+  const fetchAdoption = async (page = 1) => {
+    console.log('enter')
+    setLoadingAdoption(true);
+    try {
+      const { data } = await axios.get(`/api/payment/user/${user._id}/adoptions?page=${page}`);
+      console.log(data)
+      setAdoptions(data?.donations || []);
+      setTotalPagesAdoptions(data?.totalPagesAdoptions || 1);
+    } catch (error) {
+      console.error(error.message);
+      setAdoptions([]);
+      alert("Failed to fetch adoptions. Please try again later.");// User feedback 
+    } finally {
+      setLoadingAdoption(false); // Set loading to false after fetching data
+    }
+  };
 
   useEffect(() => {
     if (selectedTab === "donation") {
       fetchDonations(currentPage);
     }
-  }, [selectedTab, currentPage]); 
+  }, [selectedTab, currentPage]);
   const handleNextPage = () => {
     if (currentPage < totalPages) {
       setCurrentPage(currentPage + 1);
     }
   };
-
   const handlePreviousPage = () => {
     if (currentPage > 1) {
       setCurrentPage(currentPage - 1);
+    }
+  };
+
+
+
+  useEffect(() => {
+    if (selectedTab === "adoptions") {
+      fetchAdoption(currentPageAdoption);
+    }
+  }, [selectedTab, currentPageAdoption]);
+  const handleNextPageAdoption = () => {
+    if (currentPageAdoption < totalPagesAdoptions) {
+      setCurrentPageAdoption(currentPageAdoption + 1);
+    }
+  };
+
+  const handlePreviousPageAdoption = () => {
+    if (currentPageAdoption > 1) {
+      setCurrentPageAdoption(currentPageAdoption - 1);
     }
   };
 
@@ -74,18 +112,18 @@ const UserDashboard = () => {
                 className={`block p-4 sm:p-2 cursor-pointer ${selectedTab === "donation" ? "font-bold text-gray-900" : ""}`}
                 onClick={() => setSelectedTab("donation")}
               >
-                Donations
+                Adoption
               </button>
               <button
-                className={`block p-4 sm:p-2 cursor-pointer ${selectedTab === "Adoptions" ? "font-bold text-gray-900" : ""}`}
-                onClick={() => setSelectedTab("Adoptions")}
+                className={`block p-4 sm:p-2 cursor-pointer ${selectedTab === "adoptions" ? "font-bold text-gray-900" : ""}`}
+                onClick={() => setSelectedTab("adoptions")}
               >
-                Adoptions
+                Donation
               </button>
             </div>
           </div>
 
-          
+
           <div className="col-span-9 mx-0 md:mx-10 w-full">
             {selectedTab === "general" && (
               <div id="account-general">
@@ -101,15 +139,15 @@ const UserDashboard = () => {
                   </div>
                 </div>
                 <div className="text-right p-4 bg-gray-100">
-                  <button  className="btn bg-green-700 hover:bg-green-800 text-white p-2 rounded">Save changes</button>
-                  <button  className="btn bg-gray-500 text-white p-2 rounded ml-2">Cancel</button>
+                  <button className="btn bg-green-700 hover:bg-green-800 text-white p-2 rounded">Save changes</button>
+                  <button className="btn bg-gray-500 text-white p-2 rounded ml-2">Cancel</button>
                 </div>
               </div>
             )}
 
             {selectedTab === "donation" && (
               <div id="account-donations">
-                <h2 className="text-xl font-semibold mb-4">Previous Donations</h2>
+                <h2 className="text-xl font-semibold mb-4">Previous Adoptions</h2>
                 {loading ? (
                   <p>Loading donations...</p>
                 ) : donations.length === 0 ? (
@@ -162,15 +200,51 @@ const UserDashboard = () => {
               </div>
             )}
 
-            {selectedTab === "Adoptions" && (
-              <div id="Adoptions">
-                <h2>Adoptions</h2>
-              </div>
+            {selectedTab === "adoptions" && (
+               <div id="Adoptions">
+               <h2 className="text-xl font-semibold mb-4">Previous Donations</h2>
+               {loadingAdoption ? (
+                 <p>Loading Adoption...</p>
+               ) : adoptions.length === 0 ? (
+                 <p>No Adoption found.</p>
+               ) : (
+                 adoptions.map((adoption, i) => (
+                   <div key={i} className="p-4 border rounded-md shadow-sm flex flex-col sm:flex-row items-center space-x-4 bg-gray-50">
+                     <div className="flex-1">
+                       <h3 className="font-bold text-lg">Amount : ₹{adoption.amount}</h3>
+                       <p className="text-sm">Order ID: {adoption.order_id}</p>
+                       <p className="text-sm">Currency: {adoption.currency}</p>
+                       <p className="text-sm">Status: {adoption.status}</p>
+                       <p className="text-sm">Date: {new Date(adoption.created_at).toLocaleString()}</p>
+                     </div>
+                   </div>
+                 ))
+               )}
+               <div className="flex flex-col sm:flex-row justify-between items-center mt-6">
+                 <button
+                   className="px-4 py-2 w-full sm:w-auto bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 disabled:opacity-50"
+                   onClick={handlePreviousPageAdoption}
+                   disabled={currentPageAdoption === 1}
+                 >
+                   Previous
+                 </button>
+                 <span>
+                   Page {currentPageAdoption} of {totalPagesAdoptions}
+                 </span>
+                 <button
+                   className="px-4 py-2 w-full sm:w-auto bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 disabled:opacity-50"
+                   onClick={handleNextPageAdoption}
+                   disabled={currentPageAdoption === totalPagesAdoptions}
+                 >
+                   Next
+                 </button>
+               </div>
+             </div>
             )}
           </div>
         </div>
       </div>
-{/* small devices */}
+      {/* small devices */}
       <div className="md:hidden">
         {selectedTab === "general" && (
           <div id="account-general">
